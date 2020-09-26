@@ -1,4 +1,5 @@
 import numpy as np
+from stl import mesh
 import gmsh
 import sys
 import fea_functions
@@ -498,7 +499,7 @@ def topy_opt_2D():
             # Filtering Sensitivity
             for i in range(0,numel):
                 alphan[i] = np.dot(H1[i,kk],alpha)/H2[i,i]
-            # Stabilization
+            # Stabilization  
             if ii>0:
                 alphan = (oldalpha+alphan)/2
             # Design Update and Plot
@@ -773,7 +774,28 @@ def post_topy():
         nodeTags[e], nodeCoords[e], _ = gmsh.model.mesh.getNodes(e[0], e[1])
         elementTypes[e], elementTags[e], elementNodeTags[e] = gmsh.model.mesh.getElements(e[0], e[1])
     nmatel = np.reshape(elementNodeTags[dim,1],(numel,nt))[np.where(x==1)[0]]
-    nmatel = np.reshape(nmatel,-1)
+    if dim == 2:
+        geom = mesh.Mesh(np.zeros(nmatel.shape[0], dtype=mesh.Mesh.dtype))
+        for i, f in enumerate((nmatel-1)):
+            for j in range(3):
+                geom.vectors[i][j] = matnod[f[j],:]
+    else:
+        geom = mesh.Mesh(np.zeros(nmatel.shape[0]*4, dtype=mesh.Mesh.dtype))
+        for i, f in enumerate((nmatel-1)):
+            geom.vectors[4*i][0] = matnod[f[0],:]
+            geom.vectors[4*i][1] = matnod[f[1],:]
+            geom.vectors[4*i][2] = matnod[f[2],:]
+            geom.vectors[4*i+1][0] = matnod[f[0],:]
+            geom.vectors[4*i+1][1] = matnod[f[1],:]
+            geom.vectors[4*i+1][2] = matnod[f[3],:]
+            geom.vectors[4*i+2][0] = matnod[f[0],:]
+            geom.vectors[4*i+2][1] = matnod[f[2],:]
+            geom.vectors[4*i+2][2] = matnod[f[3],:]
+            geom.vectors[4*i+3][0] = matnod[f[1],:]
+            geom.vectors[4*i+3][1] = matnod[f[2],:]
+            geom.vectors[4*i+3][2] = matnod[f[3],:]
+    geom.save('opt_geom.stl')
+    nmatel = np.reshape(nmatel,-1)    
     nmin = np.uint64(len(nmatel)/nt)
     neltags = elementTags[dim,1]
     elementTags[dim,1] = [neltags[0][:nmin]]
@@ -783,7 +805,7 @@ def post_topy():
         gmsh.model.mesh.addNodes(e[0], e[1], nodeTags[e], nodeCoords[e])
         if e[0] == dim:
             gmsh.model.mesh.addElements(e[0], e[1], elementTypes[e], elementTags[e], elementNodeTags[e])
-    # gmsh.model.occ.synchronize()
+    gmsh.write('test.stl')
     if dim == 2:
         gmsh.option.setNumber('Mesh.SurfaceEdges', 0)
         gmsh.option.setNumber('Mesh.SurfaceFaces', 1)
