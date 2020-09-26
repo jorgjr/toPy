@@ -45,11 +45,10 @@ def allocH1H2(ne,nauxIx,nauxIy,nauxIz,rmin,vifac,dim,t,cent):
         n = len(np.where(~np.isinf(rij))[0])
         rij = rij[:n]
         elemid = elemid[:n]
-        sumf = 0
         fac = rmin-rij
         facn = vmin-vifac[elemid][0]
-        sumf = sumf+np.sum(fac)*np.sum(facn) # Update
-        # sumf = sumf+np.sum(fac) # 99line
+        sumf = np.sum(facfacn) # Update
+        # sumf = np.sum(fac) # 99line
         ii1 = np.append(ii1, np.repeat(i,n))
         jj = np.append(jj, elemid)     
         kk1 = np.append(kk1, fac*facn)  # Update
