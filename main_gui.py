@@ -805,7 +805,6 @@ def post_topy():
         gmsh.model.mesh.addNodes(e[0], e[1], nodeTags[e], nodeCoords[e])
         if e[0] == dim:
             gmsh.model.mesh.addElements(e[0], e[1], elementTypes[e], elementTags[e], elementNodeTags[e])
-    gmsh.write('test.stl')
     if dim == 2:
         gmsh.option.setNumber('Mesh.SurfaceEdges', 0)
         gmsh.option.setNumber('Mesh.SurfaceFaces', 1)
