@@ -39,8 +39,9 @@ def allocH1H2(ne,nauxIx,nauxIy,nauxIz,rmin,vifac,dim,t,cent):
         vmin = np.pi*rmin*rmin*t
     else:
         vmin = (4/3)*np.pi*rmin*rmin*rmin
+    vr = np.max(vifac)
     for i in range(0,ne):
-        rij, elemid = tree.query(tree.data[i], 44, eps=0, p=2, distance_upper_bound=rmin)
+        rij, elemid = tree.query(tree.data[i], np.uint32((vmin/vr)+1), eps=0, p=2, distance_upper_bound=rmin)
         n = len(np.where(~np.isinf(rij))[0])
         rij = rij[:n]
         elemid = elemid[:n]
