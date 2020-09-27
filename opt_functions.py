@@ -47,14 +47,10 @@ def allocH1H2(ne,nauxIx,nauxIy,nauxIz,rmin,vifac,dim,t,cent):
         elemid = elemid[:n]
         fac = np.reshape(rmin-rij,(n,1))
         fac[np.where(fac<0)] = 0
-        facn = vmin-vifac[elemid] # Update
-        facn[np.where(facn<0)] = 0 # Update
-        sumf = np.sum(fac*facn) # Update
-        # sumf = np.sum(fac) # 99line
+        sumf = np.sum(fac)
         ii1 = np.append(ii1, np.repeat(i,n))
         jj = np.append(jj, elemid)
-        kk1 = np.append(kk1, fac*facn)  # Update
-        # kk1 = np.append(kk1, fac)  # 99line
+        kk1 = np.append(kk1, fac)
         ii2 = np.append(ii2, i)
         kk2 = np.append(kk2, sumf)
     H1 = spr.csr_matrix((kk1, (ii1, jj))).toarray()
