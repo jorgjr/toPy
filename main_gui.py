@@ -782,7 +782,7 @@ def topy_opt_3D_stress():
             for i in range(0,numel):
                 ce[i] = np.asmatrix(uet[i]).T*np.dot(ket[i],uet[i])
                 cc[ii] = cc[ii]+np.asarray(0.5*ce[i])[0]
-                alpha[i] = alpha[i]+np.asarray((vmstresses[i])/aov[i][0])[0]
+                alpha[i] = alpha[i]+np.asarray(((x[i][0]**(pe-1))*vmstresses[i]))[0]
         # Filtering Sensitivity
         for i in range(0,numnod):
             alphann[i] = np.dot(H1[i,kk],alpha)
