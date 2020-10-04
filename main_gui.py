@@ -506,7 +506,6 @@ def topy_opt_2D():
             for i in range(0,numel):
                 ket[i]=ke[i]*(x[i]**pe)
             Kt = fea_functions.LinearTriangleAssemble(ket,matel,numel)
-            
             for j in range(0,len(idxf)):
                 U = fea_functions.SolverFEM_opt(Ut,Kt,Ff[j],U)
                 for i in range(0,numel):
@@ -751,7 +750,10 @@ def topy_opt_3D_stress():
                             matnod[matel[i][1]-1][0],matnod[matel[i][1]-1][1],matnod[matel[i][1]-1][2], \
                             matnod[matel[i][2]-1][0],matnod[matel[i][2]-1][1],matnod[matel[i][2]-1][2], \
                             matnod[matel[i][3]-1][0],matnod[matel[i][3]-1][1],matnod[matel[i][3]-1][2])
-    H1, H2 = opt_functions.allocH1H2(numel,nauxIx,nauxIy,nauxIz,rmin,aov,dim,1,cent)
+    nod_inrad = opt_functions.rmin_elnodes(numel,rmin,cent,matel,matnod,nt)
+    H1, H2, H3 = opt_functions.allocH1H2H3(matnod,numel,numnod,nauxIx,nauxIy,nauxIz,rmin,aov,dim,nt,cent,nod_inrad)
+    alphann = np.zeros((numnod,1),dtype=np.float64)
+    kkk = np.arange(numnod)
     while change > conv:
         tic()
         cc.append(0)
@@ -779,11 +781,13 @@ def topy_opt_3D_stress():
             # Objective and Sensitivity
             for i in range(0,numel):
                 ce[i] = np.asmatrix(uet[i]).T*np.dot(ket[i],uet[i])
-                cc[ii] = cc[ii]+np.asarray((0.5*x[i][0]**pe)*ce[i])[0]
-                alpha[i] = alpha[i]+np.asarray((x[i][0]**(pe-1))*vmstresses[i])[0]
+                cc[ii] = cc[ii]+np.asarray(0.5*ce[i])[0]
+                alpha[i] = alpha[i]+np.asarray((vmstresses[i])/aov[i][0])[0]
         # Filtering Sensitivity
+        for i in range(0,numnod):
+            alphann[i] = np.dot(H1[i,kk],alpha)
         for i in range(0,numel):
-            alphan[i] = np.dot(H1[i,kk],alpha)/H2[i,i]
+            alphan[i] = np.dot(H2[i,kkk],alphann)/H3[i,i]
         # Stabilization
         if ii>0:
             alphan = (oldalpha+alphan)/2
