@@ -750,6 +750,7 @@ def topy_opt_3D_stress():
                             matnod[matel[i][1]-1][0],matnod[matel[i][1]-1][1],matnod[matel[i][1]-1][2], \
                             matnod[matel[i][2]-1][0],matnod[matel[i][2]-1][1],matnod[matel[i][2]-1][2], \
                             matnod[matel[i][3]-1][0],matnod[matel[i][3]-1][1],matnod[matel[i][3]-1][2])
+    # H1, H2 = opt_functions.allocH1H2(numel,nauxIx,nauxIy,nauxIz,rmin,aov,dim,1,cent)
     nod_inrad = opt_functions.rmin_elnodes(numel,rmin,cent,matel,matnod,nt)
     H1, H2, H3 = opt_functions.allocH1H2H3(matnod,numel,numnod,nauxIx,nauxIy,nauxIz,rmin,aov,dim,nt,cent,nod_inrad)
     alphann = np.zeros((numnod,1),dtype=np.float64)
@@ -765,6 +766,7 @@ def topy_opt_3D_stress():
         for i in range(0,numel):
             ket[i]=ke[i]*(x[i]**pe)
         Kt = fea_functions.TetrahedronAssemble(ket,matel,numel)
+        # Elemental displacement
         for j in range(0,len(idxf)):
             U = fea_functions.SolverFEM_opt(Ut,Kt,Ff[j],U)
             # Elemental displacement
@@ -773,7 +775,8 @@ def topy_opt_3D_stress():
                                     [U[3*matel[i][1]-3][0]], [U[3*matel[i][1]-2][0]], [U[3*matel[i][1]-1][0]], \
                                     [U[3*matel[i][2]-3][0]], [U[3*matel[i][2]-2][0]], [U[3*matel[i][2]-1][0]], \
                                     [U[3*matel[i][3]-3][0]], [U[3*matel[i][3]-2][0]], [U[3*matel[i][3]-1][0]]]),dtype=np.float64)
-                stresses[i] = x[i][0]*D*B[i]*uet[i]
+                # stresses[i] = x[i][0]*D*B[i]*uet[i]
+                stresses[i] = D*B[i]*uet[i]
                 pstresses[i] = fea_functions.TetrahedronElementPStresses(stresses[i])
                 vmstresses[i] = (0.5*((pstresses[i][0]-pstresses[i][1])**2+ \
                                       (pstresses[i][1]-pstresses[i][2])**2+ \
@@ -781,9 +784,11 @@ def topy_opt_3D_stress():
             # Objective and Sensitivity
             for i in range(0,numel):
                 ce[i] = np.asmatrix(uet[i]).T*np.dot(ket[i],uet[i])
-                cc[ii] = cc[ii]+np.asarray(0.5*ce[i])[0]
+                cc[ii] = cc[ii]+np.asarray((0.5*x[i][0]**pe)*ce[i])[0]
                 alpha[i] = alpha[i]+np.asarray(((x[i][0]**(pe-1))*vmstresses[i]))[0]
         # Filtering Sensitivity
+        # for i in range(0,numel):
+        #     alphan[i] = np.dot(H1[i,kk],alpha)/H2[i,i]
         for i in range(0,numnod):
             alphann[i] = np.dot(H1[i,kk],alpha)
         for i in range(0,numel):
