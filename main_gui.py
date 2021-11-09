@@ -131,6 +131,8 @@ parametermenu = """
    "choices":["F.E.A.", "Topology Optimization", "Reset Physical Groups", 
               "Set Node", "Set Size at GeoPoint", "Insert B.C. at Node",
               "Reset B.C. at Nodes"] },
+  { "type":"number", "name":"SubMenu/Save Results",
+    "values":[0], "choices":[0, 1] },
   { "type":"string", "name":"ONELAB/Button", "values":["F.E.A.", "fea"],
     "visible":false }
 ]"""
@@ -139,7 +141,7 @@ gmsh.onelab.set(parametermenu)
 
 def preset():
     global matnod, matel, nodtags, nodcoords, numnod, matnodpr, numel, cent, gl, nt, dim, aov, \
-    ke, ket, ue, uet, K, Kt, F, Ft, U, Ut, B, D, nauxIx, nauxIy, nauxIz, fixel, freeel,maxit
+    ke, ket, ue, uet, K, Kt, F, Ft, U, Ut, B, D, nauxIx, nauxIy, nauxIz, fixel, freeel, maxit
     # fe, fet
     # Data about the model
     maxit = np.uint64(gmsh.onelab.getNumber("Optimization Data/Max. Iterations"))
@@ -403,7 +405,7 @@ def feanalysis_3D():
     gmsh.model.occ.synchronize()
 
 def topy_opt_2D():
-    global E, NU, t, D, ke, ket, uet, B, K, Kt, F, U, x, alpha
+    global E, NU, t, D, ke, ket, uet, B, K, Kt, F, U, Ut, x, alpha
     preset()
     E = np.float64(gmsh.onelab.getNumber("Material Data/Young Modulus [MPa]"))
     NU = np.float64(gmsh.onelab.getNumber("Material Data/Poisson's Ratio"))
@@ -443,6 +445,7 @@ def topy_opt_2D():
                             matnod[matel[i][0]-1][0],matnod[matel[i][0]-1][1], \
                             matnod[matel[i][1]-1][0],matnod[matel[i][1]-1][1], \
                             matnod[matel[i][2]-1][0],matnod[matel[i][2]-1][1])
+    K = fea_functions.LinearTriangleAssemble(ke,matel,numel)
     H1, H2 = opt_functions.allocH1H2(numel,nauxIx,nauxIy,nauxIz,rmin,vifac,dim,t,cent)
     if gmsh.onelab.getString("Optimization Data/Method")[0] == "SIMP":
        xold = np.zeros((numel,1),dtype=np.float64) 
@@ -545,7 +548,7 @@ def topy_opt_2D():
             toc()
 
 def topy_opt_3D():
-    global E, NU, D, ke, ket, uet, B, K, Kt, F, U, x, alpha, poc
+    global E, NU, D, ke, ket, uet, B, K, Kt, F, U, Ut, x, alpha, poc
     preset()
     E = np.float64(gmsh.onelab.getNumber("Material Data/Young Modulus [MPa]"))
     NU = np.float64(gmsh.onelab.getNumber("Material Data/Poisson's Ratio"))
@@ -584,6 +587,7 @@ def topy_opt_3D():
                             matnod[matel[i][1]-1][0],matnod[matel[i][1]-1][1],matnod[matel[i][1]-1][2], \
                             matnod[matel[i][2]-1][0],matnod[matel[i][2]-1][1],matnod[matel[i][2]-1][2], \
                             matnod[matel[i][3]-1][0],matnod[matel[i][3]-1][1],matnod[matel[i][3]-1][2])
+    K = fea_functions.TetrahedronAssemble(ke,matel,numel)
     if gmsh.onelab.getString("Optimization Data/Method")[0] == "SIMP":
        H1, H2 = opt_functions.allocH1H2(numel,nauxIx,nauxIy,nauxIz,rmin,aov,dim,1,cent)
        xold = np.zeros((numel,1),dtype=np.float64) 
@@ -708,7 +712,7 @@ def topy_opt_3D():
             toc()
             
 def topy_opt_3D_stress():
-    global E, NU, D, ke, ket, uet, B, K, Kt, F, U, x, alpha, poc
+    global E, NU, D, ke, ket, uet, B, K, Kt, F, U, Ut, x, alpha, poc
     preset()
     E = np.float64(gmsh.onelab.getNumber("Material Data/Young Modulus [MPa]"))
     NU = np.float64(gmsh.onelab.getNumber("Material Data/Poisson's Ratio"))
@@ -751,6 +755,7 @@ def topy_opt_3D_stress():
                             matnod[matel[i][2]-1][0],matnod[matel[i][2]-1][1],matnod[matel[i][2]-1][2], \
                             matnod[matel[i][3]-1][0],matnod[matel[i][3]-1][1],matnod[matel[i][3]-1][2])
     # H1, H2 = opt_functions.allocH1H2(numel,nauxIx,nauxIy,nauxIz,rmin,aov,dim,1,cent)
+    K = fea_functions.TetrahedronAssemble(ke,matel,numel)
     nod_inrad = opt_functions.rmin_elnodes(numel,rmin,cent,matel,matnod,nt)
     H1, H2, H3 = opt_functions.allocH1H2H3(matnod,numel,numnod,nauxIx,nauxIy,nauxIz,rmin,aov,dim,nt,cent,nod_inrad)
     alphann = np.zeros((numnod,1),dtype=np.float64)
@@ -818,6 +823,75 @@ def topy_opt_3D_stress():
         toc()
         
 def post_topy():
+
+    #### writing values to txt
+    if gmsh.onelab.getNumber("SubMenu/Save Results")[0] == 1:
+        import string
+        from decimal import Decimal
+
+        f = open("disp_matrix.txt", "w")
+        #U
+        for i in range(0,gl*numnod):
+            f.write('{:.9e}'.format(Decimal(str(U[i][0]))))
+            f.write('\n')
+        f.close()
+
+        f = open("elem_disp_matrix.txt", "w")
+        #uet
+        for i in range(0,numel):
+            for j in range(0,gl*nt):
+                f.write('{:.9e}'.format(Decimal(str(uet[i][j][0]))))
+                f.write(' ')
+            f.write('\n')
+            f.write('\n')
+        f.close()
+
+        f = open("stiff_matrix.txt", "w")
+        #Kt
+        Kaux = Kt.todense()
+        for i in range(0,gl*numnod):
+            for j in range(0,gl*numnod):
+                f.write('{:.9e}'.format(Decimal(str(Kaux[i,j]))))
+                f.write(' ')
+            f.write('\n')
+        f.close()
+
+        f = open("elem_stiff_matrix.txt", "w")
+        #ket
+        for i in range(0,numel):
+            for j in range(0,gl*nt):
+                for k in range(0,gl*nt):
+                    f.write('{:.9e}'.format(Decimal(str(ket[i][j][k]))))
+                    f.write(' ')
+                f.write('\n')
+            f.write('\n')
+            f.write('\n')
+        f.close()
+
+        f = open("orig_stiff_matrix.txt", "w")
+        #K
+        Kaux = K.todense()
+        for i in range(0,gl*numnod):
+            for j in range(0,gl*numnod):
+                f.write('{:.9e}'.format(Decimal(str(Kaux[i,j]))))
+                f.write(' ')
+            f.write('\n')
+        f.close()
+
+        f = open("orig_elem_stiff_matrix.txt", "w")
+        #ke
+        for i in range(0,numel):
+            for j in range(0,gl*nt):
+                for k in range(0,gl*nt):
+                    f.write('{:.9e}'.format(Decimal(str(ke[i][j][k]))))
+                    f.write(' ')
+                f.write('\n')
+            f.write('\n')
+            f.write('\n')
+        f.close()
+
+        #### end writing values to txt
+
     nodeTags = {}
     nodeCoords = {}
     elementTypes = {}
